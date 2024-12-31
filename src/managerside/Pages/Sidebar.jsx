@@ -8,8 +8,8 @@ const Sidebar = () => {
   const [clusters, setClusters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const URL = process.env.REACT_APP_IP;
-  const  mob  =12;
+  const URL = process.env.REACT_APP_IP  ;
+  const  mob  =7585349545;
 
   // 7585349545
 
@@ -22,7 +22,7 @@ const Sidebar = () => {
   const fetchClusters = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${URL}/admin_cluster_view/${mob}/`);
+      const response = await axios.get(`${URL}/admin_cluster_view/${mob}/`);        
       console.log(response.data);
       
       setClusters(response.data);
@@ -39,7 +39,7 @@ const Sidebar = () => {
   }, []); // Fetch data when the component mounts
 
   return (
-    <aside className="h-full">
+    <aside className="h-full">                                                          
       {/* Cluster Dropdown */}
       <div className="w-40 h-full bg-white shadow-2xl flex flex-col items-center mt-4">
         <div className="bg-sky-100 w-full rounded-t-lg">
