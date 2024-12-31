@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
 import axios from "axios";
 
 const TaskAssign = ({ devices }) => {
@@ -10,23 +9,18 @@ const TaskAssign = ({ devices }) => {
   const apiUrl = process.env.REACT_APP_IP;
 
   const [pondDevices, setPondDevices] = useState([]);
-
   const [maxTimeColumns, setMaxTimeColumns] = useState(1);
 
   const fetchPonds = async () => {
     try {
       const res = await axios.get(`${apiUrl}/adminpond_view/${id}/`);
-
       setPonds(res.data);
 
       const initialPondDevices = res.data.map((pond) => ({
         pondId: pond.id,
-
         pondName: pond.name,
-
         devices: devices.map((device) => ({
           deviceName: device.name,
-
           times: [{ from: "", to: "" }],
         })),
       }));
@@ -49,8 +43,6 @@ const TaskAssign = ({ devices }) => {
       to: "",
     });
 
-    // Update max time columns
-
     const maxColumns = Math.max(
       ...updatedPondDevices.flatMap((pond) =>
         pond.devices.map((device) => device.times.length)
@@ -58,39 +50,55 @@ const TaskAssign = ({ devices }) => {
     );
 
     setMaxTimeColumns(maxColumns);
-
     setPondDevices(updatedPondDevices);
   };
 
   const updateTimeField = (pondIndex, deviceIndex, timeIndex, field, value) => {
     const updatedPondDevices = [...pondDevices];
-
     updatedPondDevices[pondIndex].devices[deviceIndex].times[timeIndex][field] =
       value;
 
     setPondDevices(updatedPondDevices);
   };
 
+  const addCheckTrayRow = (pondIndex) => {
+    const updatedPondDevices = [...pondDevices];
+
+    // Find the index of the first "Check Tray"
+    const checkTrayIndex = updatedPondDevices[pondIndex].devices.findIndex(
+      (device) => device.deviceName.startsWith("Check Tray")
+    );
+
+    // Count existing Check Tray rows
+    const checkTrayCount = updatedPondDevices[pondIndex].devices.filter((device) =>
+      device.deviceName.startsWith("Check Tray")
+    ).length;
+
+    // Insert a new Check Tray row right after the first Check Tray
+    const newCheckTray = {
+      deviceName: `Check Tray ${checkTrayCount + 1}`,
+      times: [{ from: "", to: "" }],
+    };
+
+    updatedPondDevices[pondIndex].devices.splice(checkTrayIndex + checkTrayCount, 0, newCheckTray);
+
+    setPondDevices(updatedPondDevices);
+  };
+
   const submitData = async (pondIndex, deviceIndex) => {
     const pond = pondDevices[pondIndex];
-
     const device = pond.devices[deviceIndex];
 
     const tasks = [
       device.deviceName,
-
       device.times.map((time) => [time.from, time.to]),
-
       pond.pondName,
-
       pond.pondId,
-
       null,
     ];
 
     try {
       const response = await axios.post(`${apiUrl}/work_assign/`, { tasks });
-
       console.log("Submission successful:", response.data);
     } catch (error) {
       console.error("Submission failed:", error);
@@ -107,7 +115,6 @@ const TaskAssign = ({ devices }) => {
               <thead>
                 <tr>
                   <th className="border border-gray-300 p-2">Device</th>
-                  {/* Time Columns Scrollable Header */}
                   <th
                     colSpan={maxTimeColumns}
                     className="border border-gray-300 p-2"
@@ -116,7 +123,7 @@ const TaskAssign = ({ devices }) => {
                       {[...Array(maxTimeColumns)].map((_, timeIndex) => (
                         <div
                           key={timeIndex}
-                          className="flex-shrink-0 w-[250px] border-r last:border-0 px-2" // Fixed width for consistent alignment
+                          className="flex-shrink-0 w-[250px] border-r last:border-0 px-2"
                         >
                           <div className="text-center font-medium">
                             Time {timeIndex + 1}
@@ -130,9 +137,21 @@ const TaskAssign = ({ devices }) => {
               <tbody>
                 {pond.devices.map((device, deviceIndex) => (
                   <tr key={deviceIndex}>
-                    <td className="border border-gray-300 p-2">
+                    {/* Device Name with Plus Icon for Check Tray */}
+                    <td className="border border-gray-300 p-2 flex items-center justify-between h-[65px]">
                       {device.deviceName}
+                      {device.deviceName === "Check Tray" && (
+                        <button
+                          onClick={() => addCheckTrayRow(pondIndex)}
+                          className="bg-transparent text-green-700 hover:text-black p-2 rounded-full transition-colors"
+                          title="Add Check Tray"
+                        >
+                          <i className="bi bi-plus-circle"></i>
+                        </button>
+                      )}
                     </td>
+
+                    {/* Time Inputs */}
                     <td
                       colSpan={maxTimeColumns}
                       className="border border-gray-300 p-1"
@@ -141,7 +160,7 @@ const TaskAssign = ({ devices }) => {
                         {[...Array(maxTimeColumns)].map((_, timeIndex) => (
                           <div
                             key={timeIndex}
-                            className="flex-shrink-0 w-[250px] border-r last:border-0" // Add border to each time slot
+                            className="flex-shrink-0 w-[250px] border-r last:border-0"
                           >
                             {device.times[timeIndex] ? (
                               <div className="flex space-x-2 mt-0">
@@ -152,7 +171,6 @@ const TaskAssign = ({ devices }) => {
                                   <input
                                     type="time"
                                     value={device.times[timeIndex].from}
-                                    placeholder=""
                                     onChange={(e) =>
                                       updateTimeField(
                                         pondIndex,
@@ -196,14 +214,11 @@ const TaskAssign = ({ devices }) => {
             </table>
           </div>
 
-          {/* Actions outside the timer part */}
-          <div className=" w-auto flex flex-col items-center justify-start border ms-2">
-            {/* Actions Heading */}
+          {/* Actions */}
+          <div className="w-auto flex flex-col items-center justify-start border ms-2">
             <div className="w-full text-center py-1 font-semibold text-lg">
               Actions
             </div>
-
-            {/* Actions Table */}
             <table className="w-full mt-1">
               <tbody>
                 {pond.devices.map((device, deviceIndex) => (
