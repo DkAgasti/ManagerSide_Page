@@ -5,9 +5,7 @@ import axios from "axios";
 const TaskAssign = ({ devices }) => {
   const [ponds, setPonds] = useState([]);
   const { id } = useParams();
-
   const apiUrl = process.env.REACT_APP_IP;
-
   const [pondDevices, setPondDevices] = useState([]);
   const [maxTimeColumns, setMaxTimeColumns] = useState(1);
 
@@ -15,16 +13,21 @@ const TaskAssign = ({ devices }) => {
     try {
       const res = await axios.get(`${apiUrl}/adminpond_view/${id}/`);
       setPonds(res.data);
-
       const initialPondDevices = res.data.map((pond) => ({
         pondId: pond.id,
         pondName: pond.name,
         devices: devices.map((device) => ({
           deviceName: device.name,
-          times: [{ from: "", to: "" }],
+          times: [
+            {
+              from: "",
+              to: "",
+              quantity: "",
+              probiotics: "", // Ensure probiotics is initialized
+            },
+          ],
         })),
       }));
-
       setPondDevices(initialPondDevices);
     } catch (error) {
       console.error("Error fetching ponds:", error);
@@ -37,27 +40,37 @@ const TaskAssign = ({ devices }) => {
 
   const addTimeColumn = (pondIndex, deviceIndex) => {
     const updatedPondDevices = [...pondDevices];
-
-    updatedPondDevices[pondIndex].devices[deviceIndex].times.push({
+    const device = updatedPondDevices[pondIndex].devices[deviceIndex];
+    device.times.push({
       from: "",
       to: "",
+      quantity: "",
+      probiotics: "", // Ensure probiotics is initialized
     });
-
     const maxColumns = Math.max(
       ...updatedPondDevices.flatMap((pond) =>
         pond.devices.map((device) => device.times.length)
       )
     );
-
     setMaxTimeColumns(maxColumns);
     setPondDevices(updatedPondDevices);
   };
 
   const updateTimeField = (pondIndex, deviceIndex, timeIndex, field, value) => {
     const updatedPondDevices = [...pondDevices];
-    updatedPondDevices[pondIndex].devices[deviceIndex].times[timeIndex][field] =
-      value;
+    updatedPondDevices[pondIndex].devices[deviceIndex].times[timeIndex][field] = value;
+    setPondDevices(updatedPondDevices);
+  };
 
+  const updateQuantity = (pondIndex, deviceIndex, timeIndex, value) => {
+    const updatedPondDevices = [...pondDevices];
+    updatedPondDevices[pondIndex].devices[deviceIndex].times[timeIndex].quantity = value;
+    setPondDevices(updatedPondDevices);
+  };
+
+  const updateProbiotics = (pondIndex, deviceIndex, timeIndex, value) => {
+    const updatedPondDevices = [...pondDevices];
+    updatedPondDevices[pondIndex].devices[deviceIndex].times[timeIndex].probiotics = value;
     setPondDevices(updatedPondDevices);
   };
 
@@ -77,7 +90,7 @@ const TaskAssign = ({ devices }) => {
     // Insert a new Check Tray row right after the first Check Tray
     const newCheckTray = {
       deviceName: `Check Tray ${checkTrayCount + 1}`,
-      times: [{ from: "", to: "" }],
+      times: [{ from: "", to: "", quantity: "" }],
     };
 
     updatedPondDevices[pondIndex].devices.splice(checkTrayIndex + checkTrayCount, 0, newCheckTray);
@@ -88,15 +101,15 @@ const TaskAssign = ({ devices }) => {
   const submitData = async (pondIndex, deviceIndex) => {
     const pond = pondDevices[pondIndex];
     const device = pond.devices[deviceIndex];
-
     const tasks = [
       device.deviceName,
       device.times.map((time) => [time.from, time.to]),
       pond.pondName,
       pond.pondId,
-      null,
+      device.times.map((time) => time.quantity || null),
+      device.times.map((time) => time.probiotics || null), // Include probiotics in tasks
     ];
-
+    console.log(tasks);
     try {
       const response = await axios.post(`${apiUrl}/work_assign/`, { tasks });
       console.log("Submission successful:", response.data);
@@ -109,25 +122,19 @@ const TaskAssign = ({ devices }) => {
     <div className="container mx-full">
       {pondDevices.map((pond, pondIndex) => (
         <div key={pondIndex} className="flex justify-between items-start mb-6">
-          {/* Timer Table */}
           <div className="w-[550px] overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300 mb-4">
               <thead>
                 <tr>
                   <th className="border border-gray-300 p-2">Device</th>
-                  <th
-                    colSpan={maxTimeColumns}
-                    className="border border-gray-300 p-2"
-                  >
+                  <th colSpan={maxTimeColumns} className="border border-gray-300 p-2">
                     <div className="flex space-x-2 overflow-x-auto w-full">
                       {[...Array(maxTimeColumns)].map((_, timeIndex) => (
                         <div
                           key={timeIndex}
-                          className="flex-shrink-0 w-[250px] border-r last:border-0 px-2"
+                          className="flex-shrink-0 w-[350px] border-r last:border-0 px-2"
                         >
-                          <div className="text-center font-medium">
-                            Time {timeIndex + 1}
-                          </div>
+                          <div className="text-center font-medium">Time {timeIndex + 1}</div>
                         </div>
                       ))}
                     </div>
@@ -137,7 +144,6 @@ const TaskAssign = ({ devices }) => {
               <tbody>
                 {pond.devices.map((device, deviceIndex) => (
                   <tr key={deviceIndex}>
-                    {/* Device Name with Plus Icon for Check Tray */}
                     <td className="border border-gray-300 p-2 flex items-center justify-between h-[65px]">
                       {device.deviceName}
                       {device.deviceName === "Check Tray" && (
@@ -150,17 +156,12 @@ const TaskAssign = ({ devices }) => {
                         </button>
                       )}
                     </td>
-
-                    {/* Time Inputs */}
-                    <td
-                      colSpan={maxTimeColumns}
-                      className="border border-gray-300 p-1"
-                    >
+                    <td colSpan={maxTimeColumns} className="border border-gray-300 p-1">
                       <div className="flex space-x-2 overflow-x-auto">
                         {[...Array(maxTimeColumns)].map((_, timeIndex) => (
                           <div
                             key={timeIndex}
-                            className="flex-shrink-0 w-[250px] border-r last:border-0"
+                            className="flex-shrink-0 w-[350px] border-r last:border-0"
                           >
                             {device.times[timeIndex] ? (
                               <div className="flex space-x-2 mt-0">
@@ -184,7 +185,7 @@ const TaskAssign = ({ devices }) => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="flex justify-center text-sm font-medium text-gray-700">
+                                  <label className="text-sm font-medium text-gray-700 flex justify-center">
                                     End Time
                                   </label>
                                   <input
@@ -202,6 +203,69 @@ const TaskAssign = ({ devices }) => {
                                     className="w-full border border-gray-300 rounded px-2 py-1 bg-red-400"
                                   />
                                 </div>
+                                {device.deviceName === "Feeding" && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-700 flex justify-center">
+                                      Feed qt.
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={device.times[timeIndex].quantity || ""}
+                                      onChange={(e) =>
+                                        updateQuantity(
+                                          pondIndex,
+                                          deviceIndex,
+                                          timeIndex,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full border border-gray-300 rounded px-2 py-1 bg-yellow-400"
+                                    />
+                                  </div>
+                                )}
+                                {device.deviceName === "Feeding" && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-700 flex justify-center">
+                                      Probiotics
+                                    </label>
+                                    <input
+                                      type="text"
+                                      placeholder="Enter probiotics (comma-separated)"
+                                      value={device.times[timeIndex].probiotics || ""}
+                                      onChange={(e) =>
+                                        updateProbiotics(
+                                          pondIndex,
+                                          deviceIndex,
+                                          timeIndex,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full border border-gray-300 rounded px-2 py-1 bg-purple-400"
+                                    />
+                                  </div>
+                                )}
+                                {device.deviceName.startsWith("Check Tray") && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-700 flex justify-center">
+                                      Quantity
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={device.times[timeIndex].quantity || ""}
+                                      onChange={(e) =>
+                                        updateQuantity(
+                                          pondIndex,
+                                          deviceIndex,
+                                          timeIndex,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full border border-gray-300 rounded px-2 py-1 bg-yellow-400"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             ) : null}
                           </div>
@@ -214,11 +278,8 @@ const TaskAssign = ({ devices }) => {
             </table>
           </div>
 
-          {/* Actions */}
           <div className="w-auto flex flex-col items-center justify-start border ms-2">
-            <div className="w-full text-center py-1 font-semibold text-lg">
-              Actions
-            </div>
+            <div className="w-full text-center py-1 font-semibold text-lg">Actions</div>
             <table className="w-full mt-1">
               <tbody>
                 {pond.devices.map((device, deviceIndex) => (
@@ -245,8 +306,7 @@ const TaskAssign = ({ devices }) => {
             </table>
           </div>
 
-          {/* Pond Name */}
-          <div className="w-1/4 flex items-center justify-center border h-[430px] ms-5 bg-blue-100">
+          <div className="w-1/4 flex items-center justify-center border h-[240px] ms-5 bg-blue-100">
             <div className="bg-blue-300 border border-gray-300 p-4 text-center rounded-lg shadow-md text-xl font-bold">
               {pond.pondName}
             </div>

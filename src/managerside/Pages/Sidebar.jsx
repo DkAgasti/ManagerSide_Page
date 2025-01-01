@@ -8,8 +8,8 @@ const Sidebar = () => {
   const [clusters, setClusters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const URL = process.env.REACT_APP_IP  ;
-  const  mob  =7585349545;
+  const URL = process.env.REACT_APP_IP;
+  const  mob =7585349545;
 
   // 7585349545
 
